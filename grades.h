@@ -1,6 +1,17 @@
 #ifndef GRADES_H
 #define GRADES_H
 
+#include <stddef.h>  /* size_t type */
+#include <stdio.h>   /* printf etc. */
+#include <stdlib.h>  /* malloc etc. */
+#include <stdbool.h> /* bool type */
+#include <string.h>  /* strcmp etc. */
+#include "linked-list.h"
+
+typedef struct grade_node;
+typedef struct grades grades;
+
+
 /* Defined elsewhere */
 struct grades;
 
