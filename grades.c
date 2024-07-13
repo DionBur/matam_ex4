@@ -49,13 +49,7 @@ void student_destroy(struct student *student){
 /*grades is a linked list where each node is a student, and a each student is a struct that contains a name, and idea and a pointer to this students grades list*/
 struct grades{
     struct list *student_list;
-    element_clone_t grade_node_clone;
-    element_destroy_t grade_node_destroy;
 };
-
-
-
-
 
 struct grades* grades_init(){
     struct grades *grades;
@@ -70,19 +64,19 @@ struct grades* grades_init(){
         return NULL;
     }
     grades->student_list = list;
-    grades->grade_node_clone = grade_node_clone;
-    grades->grade_node_destroy = grade_node_destroy;
     return grades;
 }
 
-//check this
 void grades_destroy(struct grades *grades){
-    struct iterator* it = list_begin(grades);
+    if(!grades){
+        return;
+    }
+    struct iterator* it = list_begin(grades->student_list);
     struct iterator* tmp;
     while(it){
         tmp = it;
         it = list_next(it);
-        student_destroy(tmp);
+        student_destroy((struct student*)tmp); //problematic case <----------
     }
     free(grades);
 }
@@ -91,16 +85,26 @@ int grades_add_student(struct grades *grades, const char *name, int id){
     struct student *student;
     student = malloc(sizeof(struct student));
     if(!student){
-        return 1;
+        return FAIL;
     }
     student->student_name = name;
     student->id = id;
-    student->student_grades_list = list_init(grades->grade_node_clone, grades->grade_node_destroy);
+    student->student_grades_list = list_init((element_clone_t) grade_node_clone, (element_destroy_t) grade_node_destroy);
     if(!student->student_grades_list){
         free(student);
-        return 1;
+        return FAIL;
     }
-    return 0;
+    struct iterator* student_it = list_end(grades->student_list);
+    if(!student_it){
+        //asked by linked_list.h
+        free(student);
+        return FAIL;
+    }
+    if(list_insert((struct list*)student_it, student_it, student)){
+        free(student);
+        return FAIL;
+    }
+    return SUCCESS;
 }
 
 int grades_add_grade(struct grades *grades,
@@ -108,9 +112,9 @@ int grades_add_grade(struct grades *grades,
                      int id,
                      int grade){
     if(!grades || (grade < 0 || grade > 100)){
-        return 1;
+        return FAIL;
     }
-    struct iterator* student_it = list_begin(grades);
+    struct iterator* student_it = list_begin(grades->student_list);
     struct student* student;
     while(student_it){
         student = list_get(student_it);
@@ -122,35 +126,40 @@ int grades_add_grade(struct grades *grades,
                 course = list_get(course_it);
                 if(!strcmp(course->name, name)){
                     //the course is already in the list, error
-                    return 1;
+                    return FAIL;
                 }
                 course_it = list_next(course_it); 
             }
             course_it = list_end(student->student_grades_list); //paranoia
+            if(!course_it){
+                //asked by linked-list.h
+                return FAIL;
+            }
             struct grade_node *new_grade = grade_node_create(name, id, grade);
             if(!new_grade){
                 free(new_grade);
-                return 1;
+                return FAIL;
             }
-            if(list_insert(course_it, course_it,new_grade)){
+            if(list_insert((struct list*)course_it, course_it,new_grade)){ //<--
                 //fails if the element isnt inserted well;
                 free(new_grade);
-                return 1;
+                return FAIL;
             }
-            return 0;
+            return SUCCESS;
         }
         student_it = list_next(student_it);
     }
     if(!student_it){
-        return 1;
+        return FAIL;
     }
+    return FAIL;
 }
 
 float grades_calc_avg(struct grades *grades, int id, char **out){
     if(!grades){
-        return 1;
+        return -1;
     }
-    struct iterator *student_it = list_begin(grades);
+    struct iterator *student_it = list_begin(grades->student_list);
     struct student *student;
     while(student_it){
         student = list_get(student_it);
@@ -158,7 +167,7 @@ float grades_calc_avg(struct grades *grades, int id, char **out){
             //we found the student
             *out = malloc(sizeof(char)*(strlen(student->student_name)+1));
             if(!*out){
-                return 1;
+                return -1;
             }
             strcpy(*out, student->student_name);
             struct iterator *course_it = list_begin(student->student_grades_list);
@@ -173,18 +182,19 @@ float grades_calc_avg(struct grades *grades, int id, char **out){
             }
             return (float) sum/count;
         }
-    student_it = list_next(student_it);
+        student_it = list_next(student_it);
     }
     if(!student_it){
-        return 1;
+        return -1;
     }
+    return -1;
 }
 
 int grades_print_student(struct grades *grades, int id){
     if(!grades){
-        return 1;
+        return FAIL;
     }
-    struct iterator *student_it = list_begin(grades);
+    struct iterator *student_it = list_begin(grades->student_list);
     struct student *student;
     while(student_it){
         student = list_get(student_it);
@@ -206,20 +216,21 @@ int grades_print_student(struct grades *grades, int id){
                 }
                 course_it = list_next(course_it);
             }
-            return 0;
+            return SUCCESS;
         }
     student_it = list_next(student_it);
     }
     if(!student_it){
-        return 1;
+        return FAIL;
     }
+    return FAIL;
 }
 
 int grades_print_all(struct grades *grades){
     if(!grades){
-        return 1;
+        return FAIL;
     }
-    struct iterator *student_it = list_begin(grades);
+    struct iterator *student_it = list_begin(grades->student_list);
     struct iterator *course_it;
     struct student *student;
     struct grade_node *course;
@@ -243,6 +254,7 @@ int grades_print_all(struct grades *grades){
         student_it = list_next(student_it);
     }
     if(!student_it){
-        return 1;
+        return SUCCESS;
     }
+    return SUCCESS;
 }

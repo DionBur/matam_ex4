@@ -8,8 +8,10 @@
 #include <string.h>  /* strcmp etc. */
 #include "linked-list.h"
 
-typedef struct grade_node;
-typedef struct grades grades;
+
+struct grade_node;
+struct grades grades;
+enum result { SUCCESS = 0, FAIL };
 
 
 /* Defined elsewhere */
